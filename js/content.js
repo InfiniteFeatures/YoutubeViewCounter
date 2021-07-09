@@ -3,7 +3,7 @@
 {
     let viewCount = 0;
 
-    let videoId = window.location.search.split('v=')[1].split('&')[0];
+    let videoId = window.location.search.split('v=')[1]?.split('&')[0] || "";
     console.log("curr search:", videoId);
 
     let count_span = document.createElement("span");
@@ -75,26 +75,48 @@
         }
     }
 
-    const video = document.querySelector("video");
-
-    video.addEventListener("ended", onVideoEnd);
-    video.addEventListener("seeking", onVideoSeeking);
-    video.addEventListener("timeupdate", onVideoTimeUpdate);
+    const initVideoEvents = function(video) {
+        video.addEventListener("ended", onVideoEnd);
+        video.addEventListener("seeking", onVideoSeeking);
+        video.addEventListener("timeupdate", onVideoTimeUpdate);
+    }
 
     ////////
     // Page observer
 
     const info_strings = document.querySelector("#info-strings");
+    let info_strings_init = false;
     if (info_strings) {
         initUI(info_strings);
-    } else {
+        info_strings_init = true;
+    }
+
+    const video = document.querySelector("video");
+    let video_init = false;
+    if (video) {
+        initVideoEvents(video);
+        video_init = true;
+    }
+
+    if (!info_strings_init || !video_init) {
         const observer = new MutationObserver(function (mutations, mo) {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
-                    if (node.classList && node.classList.contains("ytd-video-primary-info-renderer")) {
+                    if (!info_strings_init && node.classList && node.classList.contains("ytd-video-primary-info-renderer")) {
                         const info_strings = node.querySelector("#info-strings");
                         if (info_strings) {
                             initUI(info_strings);
+                            info_strings_init = true;
+                            if (video_init) {
+                                mo.disconnect();
+                                return;
+                            }
+                        }
+                    }
+                    if (!video_init && node.tagName === "VIDEO") {
+                        initVideoEvents(node);
+                        video_init = true;
+                        if (info_strings_init) {
                             mo.disconnect();
                             return;
                         }
@@ -111,7 +133,7 @@
     
     ///////////
     //When everything done, ready to receive messages
-    
+
     chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         if (request.message === 'video') {
             videoId = request.url.split('v=')[1].split('&')[0];
