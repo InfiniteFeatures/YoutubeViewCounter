@@ -3,17 +3,21 @@
 {
     let viewCount = 0;
 
-    const videoId = window.location.search.split('v=')[1].split('&')[0];
+    let videoId = window.location.search.split('v=')[1].split('&')[0];
     console.log("curr search:", videoId);
 
     let count_span = document.createElement("span");
     count_span.textContent = "0";
 
-    const setViewCount = function () {
+    const updateViewCountUI = function () {
+        count_span.textContent = "" + viewCount;
+    }
+
+    const setViewCountStorage = function () {
         chrome.storage.local.set({ [videoId]: viewCount });
     }
 
-    const getViewCount = function () {
+    const getViewCountStorage = function (callback) {
         chrome.storage.local.get(videoId, (result) => {
             if (chrome.runtime.lastError) {
                 viewCount = 0;
@@ -22,22 +26,21 @@
                 viewCount = result[videoId] || 0;
                 console.log('Got viewcount from storage: ', result, viewCount);
             }
-            updateViewCount();
+            callback();
         });
     }
-    getViewCount();
+    getViewCountStorage(updateViewCountUI);
 
-    const updateViewCount = function () {
-        count_span.textContent = "" + viewCount;
-    }
 
     const incrementViewCount = function () {
-        viewCount++;
-        updateViewCount();
-        setViewCount();
+        getViewCountStorage(() => {
+            viewCount++;
+            updateViewCountUI();
+            setViewCountStorage();
+        });
     }
 
-    const init = function (info_strings) {
+    const initUI = function (info_strings) {
         let display_str = document.createElement("yt-formatted-string");
         display_str.classList.add("style-scope", "ytd-video-primary-info-renderer");
 
@@ -83,7 +86,7 @@
 
     const info_strings = document.querySelector("#info-strings");
     if (info_strings) {
-        init(info_strings);
+        initUI(info_strings);
     } else {
         const observer = new MutationObserver(function (mutations, mo) {
             for (const mutation of mutations) {
@@ -91,7 +94,7 @@
                     if (node.classList && node.classList.contains("ytd-video-primary-info-renderer")) {
                         const info_strings = node.querySelector("#info-strings");
                         if (info_strings) {
-                            init(info_strings);
+                            initUI(info_strings);
                             mo.disconnect();
                             return;
                         }
@@ -105,4 +108,14 @@
             subtree: true
         });
     }
+    
+    ///////////
+    //When everything done, ready to receive messages
+    
+    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+        if (request.message === 'video') {
+            videoId = request.url.split('v=')[1].split('&')[0];
+            getViewCountStorage(updateViewCountUI);
+        }
+    });
 }
