@@ -8,7 +8,7 @@
     },
     "content_scripts": [
       {
-        "matches": ["https://www.youtube.com/watch*"],
+        "matches": ["https://www.youtube.com/*"],
         "js": ["js/content.js"]
       }
     ],
@@ -25,7 +25,7 @@
         "scripting"
     ],
     "host_permissions": [
-        "https://www.youtube.com/watch*"
+        "https://www.youtube.com/*"
     ],
     "icons": {
       "16": "/images/get_started16.png",
