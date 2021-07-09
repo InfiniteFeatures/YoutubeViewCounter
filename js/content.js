@@ -1,15 +1,6 @@
 'use strict';
 
 {
-    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-        console.log(request, request.message === 'hello!')
-        // listen for messages sent from background.js
-        if (request.message === 'hello!') {
-            console.log(request.url) // new url is now in content scripts!
-        }
-    });
-
-
     let viewCount = 0;
 
     const videoId = window.location.search.split('v=')[1].split('&')[0];
@@ -18,11 +9,11 @@
     let count_span = document.createElement("span");
     count_span.textContent = "0";
 
-    const setViewCount = function() {
-        chrome.storage.local.set({[videoId]: viewCount});
+    const setViewCount = function () {
+        chrome.storage.local.set({ [videoId]: viewCount });
     }
 
-    const getViewCount = function() {
+    const getViewCount = function () {
         chrome.storage.local.get(videoId, (result) => {
             if (chrome.runtime.lastError) {
                 viewCount = 0;
@@ -36,17 +27,17 @@
     }
     getViewCount();
 
-    const updateViewCount = function() {
+    const updateViewCount = function () {
         count_span.textContent = "" + viewCount;
     }
 
-    const incrementViewCount = function() {
+    const incrementViewCount = function () {
         viewCount++;
         updateViewCount();
         setViewCount();
     }
 
-    const init = function(info_strings) {
+    const init = function (info_strings) {
         let display_str = document.createElement("yt-formatted-string");
         display_str.classList.add("style-scope", "ytd-video-primary-info-renderer");
 
@@ -61,12 +52,12 @@
 
     let videoEnding = false;
 
-    const onVideoEnd = function() {
+    const onVideoEnd = function () {
         videoEnding = false;
         incrementViewCount();
     }
 
-    const onVideoSeeking = function(e) {
+    const onVideoSeeking = function (e) {
         const video = e.target;
         if (video.currentTime === 0 && videoEnding) {
             videoEnding = false;
@@ -74,7 +65,7 @@
         }
     }
 
-    const onVideoTimeUpdate = function(e) {
+    const onVideoTimeUpdate = function (e) {
         const video = e.target;
         if (video.currentTime >= video.duration - 1) {
             videoEnding = true;
@@ -108,7 +99,7 @@
                 }
             }
         });
-        
+
         observer.observe(document.body, {
             childList: true,
             subtree: true

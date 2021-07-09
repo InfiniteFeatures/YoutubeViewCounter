@@ -3,10 +3,6 @@
     "description": "Keeps track of how many times you've watched videos.",
     "version": "0.0.1",
     "manifest_version": 3,
-    "content_scripts": [ {
-        "matches": [ "https://www.youtube.com/watch*" ],
-        "js": [ "js/content.js" ]
-    } ],
     "background": {
       "service_worker": "background.js"
     },
@@ -19,7 +15,8 @@
       }
     },
     "permissions": [
-        "storage"
+        "storage",
+        "scripting"
     ],
     "host_permissions": [
         "https://www.youtube.com/watch*"
