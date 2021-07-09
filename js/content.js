@@ -1,19 +1,28 @@
 'use strict';
 
 {
+    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+        console.log(request, request.message === 'hello!')
+        // listen for messages sent from background.js
+        if (request.message === 'hello!') {
+            console.log(request.url) // new url is now in content scripts!
+        }
+    });
+
+
     let viewCount = 0;
 
-    let videoId = window.location.search.split('v=')[1];
-    let ampersandPosition = videoId.indexOf('&');
-    if(ampersandPosition != -1) {
-        videoId = videoId.substring(0, ampersandPosition);
-    }
+    const videoId = window.location.search.split('v=')[1].split('&')[0];
+    console.log("curr search:", videoId);
 
-    let setViewCount = function() {
+    let count_span = document.createElement("span");
+    count_span.textContent = "0";
+
+    const setViewCount = function() {
         chrome.storage.local.set({[videoId]: viewCount});
     }
 
-    let getViewCount = function() {
+    const getViewCount = function() {
         chrome.storage.local.get(videoId, (result) => {
             if (chrome.runtime.lastError) {
                 viewCount = 0;
@@ -27,20 +36,17 @@
     }
     getViewCount();
 
-    let count_span = document.createElement("span");
-    count_span.textContent = "0";
-
-    let updateViewCount = function() {
+    const updateViewCount = function() {
         count_span.textContent = "" + viewCount;
     }
 
-    let incrementViewCount = function() {
+    const incrementViewCount = function() {
         viewCount++;
         updateViewCount();
         setViewCount();
     }
 
-    let init = function(info_strings) {
+    const init = function(info_strings) {
         let display_str = document.createElement("yt-formatted-string");
         display_str.classList.add("style-scope", "ytd-video-primary-info-renderer");
 
@@ -55,27 +61,27 @@
 
     let videoEnding = false;
 
-    let onVideoEnd = function() {
+    const onVideoEnd = function() {
         videoEnding = false;
         incrementViewCount();
     }
 
-    let onVideoSeeking = function(e) {
-        let video = e.target;
+    const onVideoSeeking = function(e) {
+        const video = e.target;
         if (video.currentTime === 0 && videoEnding) {
             videoEnding = false;
             incrementViewCount();
         }
     }
 
-    let onVideoTimeUpdate = function(e) {
-        let video = e.target;
+    const onVideoTimeUpdate = function(e) {
+        const video = e.target;
         if (video.currentTime >= video.duration - 1) {
             videoEnding = true;
         }
     }
 
-    let video = document.querySelector("video");
+    const video = document.querySelector("video");
 
     video.addEventListener("ended", onVideoEnd);
     video.addEventListener("seeking", onVideoSeeking);
@@ -84,15 +90,15 @@
     ////////
     // Page observer
 
-    let info_strings = document.querySelector("#info-strings");
+    const info_strings = document.querySelector("#info-strings");
     if (info_strings) {
         init(info_strings);
     } else {
-        let observer = new MutationObserver(function (mutations, mo) {
+        const observer = new MutationObserver(function (mutations, mo) {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
                     if (node.classList && node.classList.contains("ytd-video-primary-info-renderer")) {
-                        let info_strings = node.querySelector("#info-strings");
+                        const info_strings = node.querySelector("#info-strings");
                         if (info_strings) {
                             init(info_strings);
                             mo.disconnect();
