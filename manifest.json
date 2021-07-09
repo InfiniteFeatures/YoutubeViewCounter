@@ -6,6 +6,12 @@
     "background": {
       "service_worker": "background.js"
     },
+    "content_scripts": [
+      {
+        "matches": ["https://www.youtube.com/watch*"],
+        "js": ["js/content.js"]
+      }
+    ],
     "action": {
       "default_icon": {
         "16": "/images/get_started16.png",
