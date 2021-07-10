@@ -2,6 +2,8 @@
 
 {
     let viewCount = 0;
+    let ui_init = false;
+    let video_init = false;
 
     let videoId = window.location.search.split('v=')[1]?.split('&')[0] || "";
     console.log("curr search:", videoId);
@@ -12,25 +14,6 @@
     const updateViewCountUI = function () {
         count_span.textContent = "" + viewCount;
     }
-
-    const setViewCountStorage = function () {
-        chrome.storage.local.set({ [videoId]: viewCount });
-    }
-
-    const getViewCountStorage = function (callback) {
-        chrome.storage.local.get(videoId, (result) => {
-            if (chrome.runtime.lastError) {
-                viewCount = 0;
-                console.log('Error getting viewcount from storage: ', result, viewCount);
-            } else {
-                viewCount = result[videoId] || 0;
-                console.log('Got viewcount from storage: ', result, viewCount);
-            }
-            callback();
-        });
-    }
-    getViewCountStorage(updateViewCountUI);
-
 
     const incrementViewCount = function () {
         getViewCountStorage(() => {
@@ -48,6 +31,30 @@
 
         display_str.textContent = "Your views: ";
         display_str.appendChild(count_span);
+
+        getViewCountStorage(updateViewCountUI);
+
+        ui_init = true;
+    }
+
+    ////////////
+    // Storage
+
+    const setViewCountStorage = function () {
+        chrome.storage.local.set({ [videoId]: viewCount });
+    }
+
+    const getViewCountStorage = function (callback) {
+        chrome.storage.local.get(videoId, (result) => {
+            if (chrome.runtime.lastError) {
+                viewCount = 0;
+                console.log('Error getting viewcount from storage: ', result, viewCount);
+            } else {
+                viewCount = result[videoId] || 0;
+                console.log('Got viewcount from storage: ', result, viewCount);
+            }
+            callback();
+        });
     }
 
     ////////
@@ -79,34 +86,43 @@
         video.addEventListener("ended", onVideoEnd);
         video.addEventListener("seeking", onVideoSeeking);
         video.addEventListener("timeupdate", onVideoTimeUpdate);
+        
+        video_init = true;
     }
+    
+    ///////////
+    // Extension events
+
+    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+        if (request.message === 'video') {
+            videoId = request.url.split('v=')[1].split('&')[0];
+            if (ui_init) {
+                getViewCountStorage(updateViewCountUI);
+            }
+        }
+    });
 
     ////////
-    // Page observer
+    // Setup page
 
     const info_strings = document.querySelector("#info-strings");
-    let info_strings_init = false;
     if (info_strings) {
         initUI(info_strings);
-        info_strings_init = true;
     }
 
     const video = document.querySelector("video");
-    let video_init = false;
     if (video) {
         initVideoEvents(video);
-        video_init = true;
     }
 
-    if (!info_strings_init || !video_init) {
+    if (!ui_init || !video_init) {
         const observer = new MutationObserver(function (mutations, mo) {
             for (const mutation of mutations) {
                 for (const node of mutation.addedNodes) {
-                    if (!info_strings_init && node.classList && node.classList.contains("ytd-video-primary-info-renderer")) {
+                    if (!ui_init && node.classList && node.classList.contains("ytd-video-primary-info-renderer")) {
                         const info_strings = node.querySelector("#info-strings");
                         if (info_strings) {
                             initUI(info_strings);
-                            info_strings_init = true;
                             if (video_init) {
                                 mo.disconnect();
                                 return;
@@ -115,8 +131,7 @@
                     }
                     if (!video_init && node.tagName === "VIDEO") {
                         initVideoEvents(node);
-                        video_init = true;
-                        if (info_strings_init) {
+                        if (ui_init) {
                             mo.disconnect();
                             return;
                         }
@@ -130,14 +145,4 @@
             subtree: true
         });
     }
-    
-    ///////////
-    //When everything done, ready to receive messages
-
-    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-        if (request.message === 'video') {
-            videoId = request.url.split('v=')[1].split('&')[0];
-            getViewCountStorage(updateViewCountUI);
-        }
-    });
 }
