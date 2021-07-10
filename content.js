@@ -57,6 +57,12 @@
         });
     }
 
+    const clearViewCountStorage = function() {
+        chrome.storage.local.remove(videoId);
+        viewCount = 0;
+        updateViewCountUI();
+    }
+
     ////////
     // Video events
 
@@ -99,6 +105,8 @@
             if (ui_init) {
                 getViewCountStorage(updateViewCountUI);
             }
+        } else if (request.message === "clear") {
+            clearViewCountStorage();
         }
     });
 
